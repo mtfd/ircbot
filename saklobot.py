@@ -18,21 +18,30 @@ logging.basicConfig(level=logging.DEBUG)
 config = json.load(open("config.json"))
 
 BaseClient = pydle.featurize(pydle.features.RFC1459Support, pydle.features.WHOXSupport,
-                             pydle.features.AccountSupport, pydle.features.TLSSupport, 
+                             pydle.features.AccountSupport, pydle.features.TLSSupport,
                              pydle.features.IRCv3_1Support)
 
 class Saklobot(BaseClient):
-		def __init__(self, nick, *args, **kwargs):
-				super().__init__(nick, *args, **kwargs)
 
-				self.channel = config['channel']
+    def __init__(self, nick, *args, **kwargs):
+        super().__init__(nick, *args, **kwargs)
+        #join main channel defined in config
+        self.channel = config['channel']
 
-		def on_connect(self):
-				super().on_connect()
-				self.join(self.channel)
-				for chan in config['auxchans']:
-						self.join(chain)
+    def on_connect(self):
+        super().on_connect()
+        self.join(self.channel)
+        #join any other channels you want, defined in config
+        for chan in config['auxchans']:
+            self.join(chain)
 
+    def on_message(self, target, source, message):
+        if message.startswith("@help"):
+            self.message(target, "I will soon be able to do the following:")
+            self.message(target, "@alias - Add, view, etc")
+            self.message(target, "@lastseen - Display time/date of when a user was last seen")
+            self.message(target, "@quote - Add, view, etc")
+            self.message(target, "But right now I don't do anything. I don't even know why I'm here.")
 
 client = Saklobot(config['nick'], sasl_username=config['nickserv_username'],
                 sasl_password=config['nickserv_password'])
@@ -42,6 +51,6 @@ try:
 except KeyboardInterrupt:
     if client.connected:
         try:
-            client.quit(importlib.import_module('extcmd.excuse').doit())
+            client.quit(importlib.import_module('extcmd.excuses').doit())
         except:
-            client.quit('BRB NAPPING')
+            client.quit('Saklobot out.')
