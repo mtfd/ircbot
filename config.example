@@ -1,0 +1,10 @@
+{
+    "server": "irc.freenode.net",
+    "nick": "botnick",
+    "channel": "#channel",
+    "port": 6697,
+    "tls": true,
+    "nickserv_username": "botusername",
+    "nickserv_password": "botpassword",
+    "auxchans": [],
+}
