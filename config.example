@@ -7,4 +7,6 @@
     "nickserv_username": "botusername",
     "nickserv_password": "botpassword",
     "auxchans": [],
+    "token": "!",
+    "admin": ["admin1", "admin2"]
 }
