@@ -5,6 +5,7 @@ import json
 import logging
 import importlib
 import sqlite3
+import pprint
 
 loggingFormat = '%(asctime)s %(levelname)s:%(name)s: %(message)s'
 logging.basicConfig(level=logging.DEBUG)
@@ -17,6 +18,7 @@ BaseClient = pydle.featurize(pydle.features.RFC1459Support, pydle.features.WHOXS
 
 LOG = logging.getLogger(__name__)
 aliases = sqlite3.connect('aliases.db')
+
 
 class Mirabell(BaseClient):
 
@@ -43,6 +45,13 @@ class Mirabell(BaseClient):
         admin = yield self.isAdmin(source)
 
         if admin:
+            # Open config.json, edit token, and save
+            with open('config.json', 'r') as data_file:
+                config = json.load(data_file)
+                config['token'] = token
+            with open('config.json', 'w') as f:
+                f.write(json.dumps(config))
+            self.config = json.load(open("config.json"))
             return "Token changed to " + token
         else:
             return "You must be an admin to change the token."
@@ -61,17 +70,7 @@ class Mirabell(BaseClient):
         # Display a list of all bot features.
         if message.startswith(config['token'] + "help"):
             LOG.info('Help')
-            features = [
-                "admin: tell a user if they have admin privileges or not.",
-                "token: change bot token if admin",
-                "alias add: Add an alias",
-                "alias rm: Remove an alias",
-                "[custom alias]: Whatever it was set to"
-            ]
-            self.message(target, "Here are the things I can do:")
-            for feature in features:
-                self.message(target, feature)
-
+            self.message(target, "admin, token, alias add, alias rm")
             return
 
         # Tell a user if they are an administrator
@@ -82,7 +81,6 @@ class Mirabell(BaseClient):
                 self.message(target, source + ': You are an administrator.')
             else:
                 self.message(target, source + ': You are not an administrator.')
-
             return
 
         # Change the preceding character before commands
@@ -113,9 +111,10 @@ class Mirabell(BaseClient):
                 LOG.info('Trying to add a new alias.')
                 new_alias = parts[2]
                 result = self.find_db_alias(target, new_alias)
-                if result != None:
+                if result is not None:
                     if result[2] != source:
-                        self.message(target, source + ': ' + config['token'] + new_alias + ' is already owned by ' + result[2] + ' in this channel.')
+                        self.message(target, source + ': ' + config['token'] + new_alias +
+                                     ' is already owned by ' + result[2] + ' in this channel.')
                         return
                     else:
                         self.delete_db_alias(target, new_alias)
@@ -131,14 +130,15 @@ class Mirabell(BaseClient):
                 # Removing an alias
                 alias = parts[2]
                 result = self.find_db_alias(target, alias)
-                if result != None:
+                if result is not None:
                     if result[2] != source:
-                        LOG.info('User does not own this alias')
-                        if self.isAdmin(source) != True:
-                            LOG.info('User is not admin')
-                            self.message(target, source + ': ' + config['token'] + alias + ' is already owned by ' + result[2] + ' in this channel.')
+                        LOG.info('User does not own this alias.')
+                        if self.isAdmin(source) is not True:
+                            LOG.info('User is not admin.')
+                            self.message(target, source + ': ' + config['token'] + alias +
+                                         ' is already owned by ' + result[2] + ' in this channel.')
                         else:
-                            self.message(target, source + ': You are an admin and should be able to delete this but i didnt implement that yet')
+                            self.message(target, source + ': Not implemented yet.')
                         return
                     self.delete_db_alias(target, alias)
 
@@ -149,18 +149,18 @@ class Mirabell(BaseClient):
 
         # Possible DB alias
         if message.startswith(config['token']):
-            LOG.info('Trying to see if this is a DB alias that exists')
+            LOG.info('Trying to see if this is a DB alias that exists.')
             parts = message.replace(config['token'], '').split(' ')
             LOG.info(parts)
             result = self.find_db_alias(target, parts[0])
-            if result != None:
+            if result is not None:
                 self.message(target, result[3])
                 return
 
             self.unknown_command(target, source, message)
 
     def unknown_command(self, target, source, message):
-        self.message(target, source + ': Look buddy I dont know wtf youre talking about.')
+        self.message(target, source + ': Alias does not exist.')
         return
 
     def find_db_alias(self, channel, alias):
@@ -175,12 +175,13 @@ class Mirabell(BaseClient):
         c = aliases.cursor()
         LOG.info('Trying to insert an alias')
         LOG.debug([alias, owner, definition])
-        c.execute("insert into aliases (channel, alias, owner, definition) values (?, ?, ?, ?)", [channel, alias, owner, definition])
+        c.execute("insert into aliases (channel, alias, owner, definition) values (?, ?, ?, ?)",
+                  [channel, alias, owner, definition])
         aliases.commit()
 
     def delete_db_alias(self, channel, alias):
         result = self.find_db_alias(channel, alias)
-        if result != None:
+        if result is not None:
             c = aliases.cursor()
             c.execute('delete from aliases where channel = ? and alias = ? limit 1', [channel, alias])
             aliases.commit()
@@ -193,7 +194,9 @@ class Mirabell(BaseClient):
         results = c.fetchall()
         return results
 
-client = Mirabell(config['nick'], sasl_username=config['nickserv_username'], sasl_password=config['nickserv_password'])
+
+client = Mirabell(config['nick'], sasl_username=config['nickserv_username'],
+                  sasl_password=config['nickserv_password'])
 client.connect(config['server'], config['port'], tls=config['tls'])
 
 try:
