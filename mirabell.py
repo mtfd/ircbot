@@ -35,23 +35,25 @@ class Mirabell(BaseClient):
             self.join(chan)
             self.currentChannels.append(chan)
 
-    @pydle.coroutine
+    # @pydle.coroutine
     def changeToken(self, message, source):
         if len(message.split()) > 2:
             return "Token cannot contain spaces."
         token = message.split(' ')[1]
         if not token:
             return "Token must not be empty."
-        admin = yield self.isAdmin(source)
+        # admin = yield self.isAdmin(source)
 
-        if admin:
+        if self.isAdmin(source):
+            print('block firing')
             # Open config.json, edit token, and save
             with open('config.json', 'r') as data_file:
                 config = json.load(data_file)
                 config['token'] = token
             with open('config.json', 'w') as f:
                 f.write(json.dumps(config))
-            self.config = json.load(open("config.json"))
+            config = json.load(open("config.json"))
+            pprint.pprint(self.config)
             return "Token changed to " + token
         else:
             return "You must be an admin to change the token."
@@ -70,7 +72,12 @@ class Mirabell(BaseClient):
         # Display a list of all bot features.
         if message.startswith(config['token'] + "help"):
             LOG.info('Help')
-            self.message(target, "admin, token, alias add, alias rm")
+            self.message(target, "help, admin, token, aliaslist, alias add, alias rm, " + config['nick'] + ': token?')
+            return
+
+        # Say what the token is currently set to
+        if message.startswith(config['nick'] + ': token?'):
+            self.message(target, "Token is currently set to: " + config['token'])
             return
 
         # Tell a user if they are an administrator
