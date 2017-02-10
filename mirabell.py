@@ -6,6 +6,9 @@ import logging
 import importlib
 import sqlite3
 import pprint
+import re
+from lxml import html
+import requests
 
 loggingFormat = '%(asctime)s %(levelname)s:%(name)s: %(message)s'
 logging.basicConfig(level=logging.DEBUG)
@@ -109,6 +112,14 @@ class Mirabell(BaseClient):
             msg = 'These are my aliases for this channel: ' + ', '.join(aliases)
             self.message(target, msg)
 
+        # URL scraper
+        if 'http://' in message or 'https://' in message:
+            LOG.info('Trying to parse out URL from message')
+            match = re.search('(http|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?', message)
+            if match is not None:
+                url_title = self.scrape_url(match.group())
+                self.message(target, url_title)
+
         # DB Alias control
         if message.startswith(config['token'] + "alias"):
             LOG.info('DB Alias control')
@@ -201,6 +212,11 @@ class Mirabell(BaseClient):
         results = c.fetchall()
         return results
 
+    def scrape_url(self, url):
+        page = requests.get(url)
+        tree = html.fromstring(page.content)
+        title = tree.xpath('//title/text()')
+        return ' '.join(title)
 
 client = Mirabell(config['nick'], sasl_username=config['nickserv_username'],
                   sasl_password=config['nickserv_password'])
